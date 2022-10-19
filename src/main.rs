@@ -7,11 +7,17 @@ pub mod groth16;
 pub mod marlin;
 
 fn main() {
+    println!("-----------------------------");
     println!("Run Groth16 with bls12-381...");
+    println!("-----------------------------");
     run_groth16::<ark_bls12_381::Fr, ark_bls12_381::Bls12_381>();
+    println!("-----------------------------");
     println!("Run Groth16 with bn254...");
+    println!("-----------------------------");
     run_groth16::<ark_bn254::Fr, ark_bn254::Bn254>();
+    println!("-----------------------------");
     println!("Run Marlin with bls12-381...");
+    println!("-----------------------------");
     run_marlin::<
         ark_bls12_381::Fr,
         ark_poly_commit::marlin_pc::MarlinKZG10<
@@ -20,7 +26,9 @@ fn main() {
         >,
         Blake2s,
     >();
+    println!("-----------------------------");
     println!("Run Marlin with bn254...");
+    println!("-----------------------------");
     run_marlin::<
         ark_bn254::Fr,
         ark_poly_commit::marlin_pc::MarlinKZG10<
