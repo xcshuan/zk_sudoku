@@ -6,6 +6,8 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+digest = "0.9"
+blake2 = { version = "0.9", default-features = false }
 ark-std = { version = "^0.3.0", default-features = false, features = [
     "parallel",
 ] }
@@ -16,9 +18,13 @@ ark-ec = { version = "^0.3.0", default-features = false, features = [
     "parallel",
 ] }
 ark-groth16 = { version = "^0.3.0", features = ["parallel"] }
+ark-marlin = { version = "^0.3.0", features = ["parallel"] }
 ark-r1cs-std = { version = "^0.3.0", default-features = false, features = [
     "parallel",
 ] }
+
+ark-poly-commit = { version = "^0.3.0", features = ["parallel"] }
+ark-poly = { version = "^0.3.0", features = ["parallel"] }
 
 ark-bls12-381 = { version = "^0.3.0" }
 ark-ed-on-bls12-381 = { version = "^0.3.0", features = ["r1cs"] }
