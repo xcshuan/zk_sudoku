@@ -1,0 +1,9 @@
+[package]
+name = "zk_sudoku_halo2"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+halo2_proofs = {git = "https://github.com/zcash/halo2.git", rev = "ec9dce"}
