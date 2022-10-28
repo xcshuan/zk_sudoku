@@ -7,6 +7,7 @@ edition = "2021"
 
 [dependencies]
 digest = "0.9"
+sha2 = "0.9"
 blake2 = { version = "0.9", default-features = false }
 ark-std = { version = "^0.3.0", default-features = false, features = [
     "parallel",
@@ -25,6 +26,7 @@ ark-r1cs-std = { version = "^0.3.0", default-features = false, features = [
 
 ark-poly-commit = { version = "^0.3.0", features = ["parallel"] }
 ark-poly = { version = "^0.3.0", features = ["parallel"] }
+ark-crypto-primitives = { git = "https://github.com/arkworks-rs/crypto-primitives", rev="f4d814", features = ["r1cs","parallel"] }
 
 ark-bls12-381 = { version = "^0.3.0" }
 ark-ed-on-bls12-381 = { version = "^0.3.0", features = ["r1cs"] }

@@ -15,5 +15,9 @@ members = [
     "crates/plonky2",
 ]
 
+[[bin]]
+name = "test_arkworks"
+path = "src/arkworks.rs"
+
 [dependencies]
 zk_sudoku_arkworks = { path = "crates/arkworks" }

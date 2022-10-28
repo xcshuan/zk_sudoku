@@ -5,6 +5,7 @@ use crate::{groth16::run_groth16, marlin::run_marlin};
 pub mod circuit;
 pub mod groth16;
 pub mod marlin;
+pub mod parameters;
 
 pub fn test_arkworks() {
     println!("-----------------------------");
@@ -16,7 +17,7 @@ pub fn test_arkworks() {
     println!("-----------------------------");
     run_groth16::<ark_bn254::Fr, ark_bn254::Bn254>();
     println!("-----------------------------");
-    println!("Run Marlin with bls12-381...");
+    println!("Run Marlin with KZG10<bls12-381> and Blake2s...");
     println!("-----------------------------");
     run_marlin::<
         ark_bls12_381::Fr,
@@ -27,7 +28,7 @@ pub fn test_arkworks() {
         Blake2s,
     >();
     println!("-----------------------------");
-    println!("Run Marlin with bn254...");
+    println!("Run Marlin with KZG10<bn254> and Blake2s...");
     println!("-----------------------------");
     run_marlin::<
         ark_bn254::Fr,

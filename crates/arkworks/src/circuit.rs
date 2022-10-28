@@ -1,23 +1,82 @@
+use std::{borrow::Borrow, cmp::Ordering};
+
+use ark_crypto_primitives::{crh::sha256::constraints::Sha256Gadget, CRHSchemeGadget};
 use ark_ff::PrimeField;
 use ark_r1cs_std::{fields::fp::FpVar, prelude::*};
-use ark_relations::r1cs::ConstraintSynthesizer;
+use ark_relations::r1cs::{ConstraintSynthesizer, Namespace, SynthesisError};
+use sha2::Sha256;
 
-#[derive(Clone)]
-pub struct SudokuCircuit<Scalar: PrimeField> {
-    pub unsolved: [[Scalar; 9]; 9],
-    pub solved: [[Scalar; 9]; 9],
+#[derive(Default, Hash, Eq, PartialEq, Copy, Clone, PartialOrd, Ord, Debug)]
+pub struct U8(pub u8);
+
+#[derive(Clone, Debug)]
+pub struct U8Var<F: PrimeField>(pub UInt8<F>);
+
+impl<F: PrimeField> U8Var<F> {
+    fn enforce_cmp(
+        &self,
+        other: &U8Var<F>,
+        ordering: Ordering,
+        should_also_check_equality: bool,
+    ) -> Result<(), SynthesisError> {
+        let self_bits = self.0.to_bits_le()?;
+        let self_fe = Boolean::le_bits_to_fp_var(&self_bits)?;
+        let other_bits = other.0.to_bits_le()?;
+        let other_fe = Boolean::le_bits_to_fp_var(&other_bits)?;
+        self_fe.enforce_cmp(&other_fe, ordering, should_also_check_equality)
+    }
+
+    fn enforce_not_equal(&self, other: &Self) -> Result<(), SynthesisError> {
+        self.0.enforce_not_equal(&other.0)
+    }
+
+    fn conditional_enforce_not_equal(
+        &self,
+        other: &Self,
+        should_enforce: &Boolean<F>,
+    ) -> Result<(), SynthesisError> {
+        self.0.conditional_enforce_equal(&other.0, should_enforce)
+    }
+
+    fn is_eq(&self, other: &Self) -> Result<Boolean<F>, SynthesisError> {
+        self.0.is_eq(&other.0)
+    }
 }
 
-impl<Scalar: PrimeField> ConstraintSynthesizer<Scalar> for SudokuCircuit<Scalar> {
+impl<F: PrimeField> AllocVar<U8, F> for U8Var<F> {
+    fn new_variable<T: Borrow<U8>>(
+        cs: impl Into<Namespace<F>>,
+        f: impl FnOnce() -> Result<T, SynthesisError>,
+        mode: AllocationMode,
+    ) -> Result<Self, SynthesisError> {
+        UInt8::new_variable(cs.into(), || f().map(|u| u.borrow().0), mode).map(Self)
+    }
+}
+
+#[derive(Clone)]
+pub struct SudokuCircuit<F: PrimeField> {
+    pub unsolved_hash: F,
+    pub unsolved: [[U8; 9]; 9],
+    pub solved: [[U8; 9]; 9],
+}
+
+impl<F: PrimeField> ConstraintSynthesizer<F> for SudokuCircuit<F> {
     fn generate_constraints(
         self,
-        cs: ark_relations::r1cs::ConstraintSystemRef<Scalar>,
+        cs: ark_relations::r1cs::ConstraintSystemRef<F>,
     ) -> ark_relations::r1cs::Result<()> {
         let mut unsolved_var = Vec::with_capacity(9);
         let mut solved_var = Vec::with_capacity(9);
 
-        let one_var = FpVar::new_constant(cs.clone(), Scalar::one())?;
-        let nine_var = FpVar::new_constant(cs.clone(), Scalar::from(9u32))?;
+        let sha256_parameter =
+            <Sha256Gadget<F> as CRHSchemeGadget<Sha256, F>>::ParametersVar::new_constant(
+                cs.clone(),
+                (),
+            )?;
+
+        let zero_var = U8Var::new_constant(cs.clone(), U8(1u8))?;
+        let one_var = U8Var::new_constant(cs.clone(), U8(0u8))?;
+        let nine_var = U8Var::new_constant(cs.clone(), U8(9u8))?;
 
         // Check if the numbers of the solved sudoku are >=1 and <=9
         // Each number in the solved sudoku is checked to see if it is >=1 and <=9
@@ -25,12 +84,12 @@ impl<Scalar: PrimeField> ConstraintSynthesizer<Scalar> for SudokuCircuit<Scalar>
             unsolved_var.push(Vec::with_capacity(9));
             solved_var.push(Vec::with_capacity(9));
             for j in 0..9 {
-                unsolved_var[i].push(FpVar::new_input(
+                unsolved_var[i].push(U8Var::new_witness(
                     ark_relations::ns!(cs, "unsolved"),
                     || Ok(self.unsolved[i][j]),
                 )?);
 
-                solved_var[i].push(FpVar::new_witness(
+                solved_var[i].push(U8Var::new_witness(
                     ark_relations::ns!(cs, "solved"),
                     || Ok(self.solved[i][j]),
                 )?);
@@ -47,7 +106,7 @@ impl<Scalar: PrimeField> ConstraintSynthesizer<Scalar> for SudokuCircuit<Scalar>
             for j in 0..9 {
                 unsolved_var[i][j].conditional_enforce_not_equal(
                     &solved_var[i][j],
-                    &unsolved_var[i][j].is_zero()?,
+                    &unsolved_var[i][j].is_eq(&zero_var)?,
                 )?;
             }
         }
@@ -91,6 +150,28 @@ impl<Scalar: PrimeField> ConstraintSynthesizer<Scalar> for SudokuCircuit<Scalar>
                 }
             }
         }
+
+        let hash_input = unsolved_var
+            .into_iter()
+            .map(|row| row.into_iter().map(|u8_var| u8_var.0))
+            .flatten()
+            .collect::<Vec<UInt8<F>>>();
+
+        let hash_result =
+            Sha256Gadget::<F>::evaluate(&sha256_parameter, &hash_input)?.to_bytes()?;
+
+        // print!("[");
+        // hash_result
+        //     .iter()
+        //     .for_each(|a| print!("{}, ", a.value().unwrap()));
+        // print!("]\n");
+
+        let hash_fe = Boolean::le_bits_to_fp_var(&hash_result[0..31].to_bits_le()?)?;
+        // println!("hash_fe: {}", hash_fe.value()?);
+
+        let expected = FpVar::new_input(cs.clone(), || Ok(self.unsolved_hash))?;
+
+        hash_fe.enforce_equal(&expected)?;
 
         Ok(())
     }
