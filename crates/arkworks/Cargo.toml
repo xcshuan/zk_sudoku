@@ -9,6 +9,7 @@ edition = "2021"
 digest = "0.9"
 sha2 = "0.9"
 blake2 = { version = "0.9", default-features = false }
+hex = "*"
 ark-std = { version = "^0.3.0", default-features = false, features = [
     "parallel",
 ] }
@@ -36,3 +37,10 @@ ark-ed-on-bn254 = { version = "^0.3.0", features = ["r1cs"] }
 ark-relations = { version = "^0.3.0", default-features = false }
 ark-snark = { version = "^0.3.0", default-features = false }
 ark-serialize = { version = "^0.3.0", default-features = false }
+
+tracing = { version = "0.1", default-features = false, features = [ "attributes" ] }
+tracing-subscriber = { version = "0.2" }
+
+[dependencies.num-bigint]
+version = "0.4.0"
+default-features = false

@@ -4,11 +4,16 @@ use ark_ff::PrimeField;
 use ark_marlin::{AHPForR1CS, Marlin};
 use ark_poly::univariate::DensePolynomial;
 use ark_poly_commit::PolynomialCommitment;
-use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystem};
+use ark_relations::r1cs::{ConstraintLayer, ConstraintSynthesizer, ConstraintSystem, TracingMode};
 use ark_serialize::CanonicalSerialize;
 use digest::Digest;
+use tracing_subscriber::prelude::__tracing_subscriber_SubscriberExt;
 
-use crate::{circuit::SudokuCircuit, parameters::SOLVED, parameters::UNSOLVED};
+use crate::{
+    circuit::SudokuCircuit,
+    parameters::UNSOLVED,
+    parameters::{unsolved_hash, SOLVED},
+};
 
 pub fn run_marlin<F, PC, D>()
 where
@@ -16,19 +21,16 @@ where
     PC: PolynomialCommitment<F, DensePolynomial<F>>,
     D: Digest,
 {
-    let hash_result = sha2::Sha256::digest(
-        &UNSOLVED
-            .into_iter()
-            .map(|a| a.into_iter().map(|a| a.0))
-            .flatten()
-            .collect::<Vec<u8>>(),
-    )
-    .to_vec();
+    // First, some boilerplat that helps with debugging
+    let mut layer = ConstraintLayer::default();
+    layer.mode = TracingMode::OnlyConstraints;
+    let subscriber = tracing_subscriber::Registry::default().with(layer);
+    let _guard = tracing::subscriber::set_default(subscriber);
 
     // Use the same circuit but with different inputs to verify against
     // This test checks that the SNARK passes on the provided input
     let circuit_to_verify_against: SudokuCircuit<F> = SudokuCircuit {
-        unsolved_hash: F::from_le_bytes_mod_order(&hash_result[..31]),
+        unsolved_hash: unsolved_hash(UNSOLVED),
         unsolved: UNSOLVED,
         solved: SOLVED,
     };

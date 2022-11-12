@@ -39,3 +39,28 @@ pub fn test_arkworks() {
         Blake2s,
     >();
 }
+
+
+#[test]
+fn test_hash() {
+    use parameters::UNSOLVED;
+    use digest::Digest;
+    use ark_bn254::Fr;
+    use ark_ff::PrimeField;
+    use num_bigint::BigUint;
+
+    let hash_result = sha2::Sha256::digest(
+        &UNSOLVED
+            .into_iter()
+            .map(|a| a.into_iter().map(|a| a))
+            .flatten()
+            .collect::<Vec<u8>>(),
+    )
+    .to_vec();
+
+    println!("hash result: {}", hex::encode(&hash_result));
+
+    let fr = Fr::from_be_bytes_mod_order(&hash_result[..31]);
+    
+    println!("{}", BigUint::try_from(fr.into_repr()).unwrap())
+}

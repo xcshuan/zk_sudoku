@@ -6,13 +6,14 @@ use ark_r1cs_std::{fields::fp::FpVar, prelude::*};
 use ark_relations::r1cs::{ConstraintSynthesizer, Namespace, SynthesisError};
 use sha2::Sha256;
 
-#[derive(Default, Hash, Eq, PartialEq, Copy, Clone, PartialOrd, Ord, Debug)]
-pub struct U8(pub u8);
-
 #[derive(Clone, Debug)]
 pub struct U8Var<F: PrimeField>(pub UInt8<F>);
 
 impl<F: PrimeField> U8Var<F> {
+    #[tracing::instrument(
+        target = "r1cs",
+        skip(self, other, ordering, should_also_check_equality)
+    )]
     fn enforce_cmp(
         &self,
         other: &U8Var<F>,
@@ -26,11 +27,13 @@ impl<F: PrimeField> U8Var<F> {
         self_fe.enforce_cmp(&other_fe, ordering, should_also_check_equality)
     }
 
+    #[tracing::instrument(target = "r1cs", skip(self, other))]
     fn enforce_not_equal(&self, other: &Self) -> Result<(), SynthesisError> {
         self.0.enforce_not_equal(&other.0)
     }
 
-    fn conditional_enforce_not_equal(
+    #[tracing::instrument(target = "r1cs", skip(self, other, should_enforce))]
+    fn conditional_enforce_equal(
         &self,
         other: &Self,
         should_enforce: &Boolean<F>,
@@ -38,26 +41,28 @@ impl<F: PrimeField> U8Var<F> {
         self.0.conditional_enforce_equal(&other.0, should_enforce)
     }
 
-    fn is_eq(&self, other: &Self) -> Result<Boolean<F>, SynthesisError> {
-        self.0.is_eq(&other.0)
+    #[tracing::instrument(target = "r1cs", skip(self))]
+    fn is_zero(&self) -> Result<Boolean<F>, SynthesisError> {
+        self.0.is_eq(&UInt8::new_constant(self.0.cs(), 0)?)
     }
 }
 
-impl<F: PrimeField> AllocVar<U8, F> for U8Var<F> {
-    fn new_variable<T: Borrow<U8>>(
+impl<F: PrimeField> AllocVar<u8, F> for U8Var<F> {
+    #[tracing::instrument(target = "r1cs", skip(cs, f, mode))]
+    fn new_variable<T: Borrow<u8>>(
         cs: impl Into<Namespace<F>>,
         f: impl FnOnce() -> Result<T, SynthesisError>,
         mode: AllocationMode,
     ) -> Result<Self, SynthesisError> {
-        UInt8::new_variable(cs.into(), || f().map(|u| u.borrow().0), mode).map(Self)
+        UInt8::new_variable(cs.into(), || f().map(|u| u), mode).map(Self)
     }
 }
 
 #[derive(Clone)]
 pub struct SudokuCircuit<F: PrimeField> {
     pub unsolved_hash: F,
-    pub unsolved: [[U8; 9]; 9],
-    pub solved: [[U8; 9]; 9],
+    pub unsolved: [[u8; 9]; 9],
+    pub solved: [[u8; 9]; 9],
 }
 
 impl<F: PrimeField> ConstraintSynthesizer<F> for SudokuCircuit<F> {
@@ -74,9 +79,8 @@ impl<F: PrimeField> ConstraintSynthesizer<F> for SudokuCircuit<F> {
                 (),
             )?;
 
-        let zero_var = U8Var::new_constant(cs.clone(), U8(1u8))?;
-        let one_var = U8Var::new_constant(cs.clone(), U8(0u8))?;
-        let nine_var = U8Var::new_constant(cs.clone(), U8(9u8))?;
+        let one_var = U8Var::new_constant(cs.clone(), 1u8)?;
+        let nine_var = U8Var::new_constant(cs.clone(), 9u8)?;
 
         // Check if the numbers of the solved sudoku are >=1 and <=9
         // Each number in the solved sudoku is checked to see if it is >=1 and <=9
@@ -104,10 +108,8 @@ impl<F: PrimeField> ConstraintSynthesizer<F> for SudokuCircuit<F> {
         // If unsolved[i][j] is zero, it means that solved [i][j] is different from unsolved[i][j]
         for i in 0..9 {
             for j in 0..9 {
-                unsolved_var[i][j].conditional_enforce_not_equal(
-                    &solved_var[i][j],
-                    &unsolved_var[i][j].is_eq(&zero_var)?,
-                )?;
+                let is_zero = unsolved_var[i][j].is_zero()?;
+                unsolved_var[i][j].conditional_enforce_equal(&solved_var[i][j], &is_zero.not())?;
             }
         }
 
