@@ -1,10 +1,13 @@
 pragma circom 2.0.0;
 
 include "../node_modules/circomlib/circuits/comparators.circom";
+include "../node_modules/circomlib/circuits/bitify.circom";
+include "../node_modules/circomlib/circuits/sha256/sha256.circom";
 
 template Sudoku() {
     signal input unsolved[9][9];
     signal input solved[9][9];
+    signal input unsolvedHash;
 
 
     // Check if the numbers of the solved sudoku are >=1 and <=9
@@ -119,7 +122,35 @@ template Sudoku() {
             }
         }
     }
+
+
+    component unsolvedBytes[81];
+    var indexBytes = 0;
+
+    component unsolvedSha256 = Sha256(648);
+    var indexBits = 0;
+    // check hash consistency
+    for (var i = 0; i < 9; i++) {
+       for (var j = 0; j < 9; j++) {
+               unsolvedBytes[indexBytes] = Num2Bits(8);
+               unsolvedBytes[indexBytes].in <== unsolved[i][j];
+
+               for (var k = 0; k < 8; k++) {
+                 unsolvedSha256.in[indexBits] <== unsolvedBytes[indexBytes].out[7-k];
+                 indexBits ++;
+               }
+
+               indexBytes ++;
+        }
+    }
+
+    component hashToFr = Bits2Num(248);
+    for (var i = 0;i < 248; i++) {
+        hashToFr.in[i] <== unsolvedSha256.out[247 - i];
+    }
+
+    hashToFr.out === unsolvedHash;
 }
 
 // unsolved is a public input signal. It is the unsolved sudoku
-component main {public [unsolved]} = Sudoku();
+component main {public [unsolvedHash]} = Sudoku();

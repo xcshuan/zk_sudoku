@@ -6,7 +6,7 @@ interface IVerifier {
         uint256[2] memory a,
         uint256[2][2] memory b,
         uint256[2] memory c,
-        uint256[81] memory input
+        uint256[1] memory input
     ) external view returns (bool);
 }
 
@@ -57,39 +57,37 @@ contract Sudoku {
         uint256[2] memory a,
         uint256[2][2] memory b,
         uint256[2] memory c,
-        uint256[81] memory input
+        uint256[1] memory input
     ) public view returns (bool) {
         return IVerifier(verifierAddr).verifyProof(a, b, c, input);
     }
 
-    function verifySudokuBoard(uint256[81] memory board)
+    function verifySudokuBoard(uint256[1] memory board)
         private
         view
         returns (bool)
     {
-        bool isEqual = true;
         for (uint256 i = 0; i < sudokuBoardList.length; ++i) {
-            isEqual = true;
+            bytes memory hashInput = new bytes(81);
             for (uint256 j = 0; j < sudokuBoardList[i].length; ++j) {
                 for (uint256 k = 0; k < sudokuBoardList[i][j].length; ++k) {
-                    if (board[9 * j + k] != sudokuBoardList[i][j][k]) {
-                        isEqual = false;
-                        break;
-                    }
+                    hashInput[9 * j + k] = bytes1(sudokuBoardList[i][j][k]);
                 }
             }
-            if (isEqual == true) {
-                return isEqual;
+            bytes32 hashResult = sha256(hashInput);
+            uint256 num = uint256((hashResult >> 8));
+            if (board[0] == num) {
+                return true;
             }
         }
-        return isEqual;
+        return false;
     }
 
     function verifySudoku(
         uint256[2] memory a,
         uint256[2][2] memory b,
         uint256[2] memory c,
-        uint256[81] memory input
+        uint256[1] memory input
     ) public view returns (bool) {
         require(verifySudokuBoard(input), "This board does not exist");
         require(verifyProof(a, b, c, input), "Filed proof check");

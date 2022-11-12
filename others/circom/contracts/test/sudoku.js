@@ -1,6 +1,7 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
 const { exportCallDataGroth16 } = require("./utils/utils");
+const sha256 = require("./utils/sha256");
 
 describe("Sudoku", function () {
   let SudokuVerifier, sudokuVerifier, Sudoku, sudoku;
@@ -45,9 +46,17 @@ describe("Sudoku", function () {
       [6, 9, 2, 1, 4, 5, 3, 8, 7],
     ];
 
+    let hashInput = Buffer.from(unsolved.flat()).toString("hex");
+    let hashResult = sha256.hash(hashInput, { msgFormat: 'hex-bytes' })
+
+    console.log("hashResult: ", hashResult);
+    let unsolvedHash = BigInt('0x' + hashResult.substring(0, hashResult.length - 2));
+    console.log("unsolvedHash: ", unsolvedHash);
+
     const input = {
       unsolved: unsolved,
       solved: solved,
+      unsolvedHash: unsolvedHash,
     };
 
     let dataResult = await exportCallDataGroth16(
@@ -55,6 +64,8 @@ describe("Sudoku", function () {
       "./zkproof/sudoku.wasm",
       "./zkproof/sudoku_final.zkey"
     );
+
+    // console.log("dataResult: ", dataResult);
 
     // Call the function.
     let result = await sudokuVerifier.verifyProof(
@@ -73,7 +84,7 @@ describe("Sudoku", function () {
       [0, 0],
     ];
     let c = [0, 0];
-    let Input = new Array(81).fill(0);
+    let Input = new Array(1).fill(0);
 
     let dataResult = { a, b, c, Input };
 
@@ -111,9 +122,17 @@ describe("Sudoku", function () {
       [6, 9, 2, 1, 4, 5, 3, 8, 7],
     ];
 
+    let hashInput = Buffer.from(unsolved.flat()).toString("hex");
+    console.log("hashInput: ", hashInput);
+    let hashResult = sha256.hash(hashInput, { msgFormat: 'hex-bytes' })
+    console.log("hashResult: ", hashResult);
+    let unsolvedHash = BigInt('0x' + hashResult.substring(0, hashResult.length - 2));
+    console.log("unsolvedHash: ", unsolvedHash);
+
     const input = {
       unsolved: unsolved,
       solved: solved,
+      unsolvedHash: unsolvedHash,
     };
 
     let dataResult = await exportCallDataGroth16(
@@ -121,6 +140,8 @@ describe("Sudoku", function () {
       "./zkproof/sudoku.wasm",
       "./zkproof/sudoku_final.zkey"
     );
+
+    // console.log("dataResult: ", dataResult);
 
     // Call the function.
     let result = await sudoku.verifySudoku(
@@ -156,9 +177,16 @@ describe("Sudoku", function () {
       [6, 9, 2, 1, 4, 5, 3, 8, 7],
     ];
 
+    let hashInput = Buffer.from(unsolved.flat()).toString("hex");
+    let hashResult = sha256.hash(hashInput, { msgFormat: 'hex-bytes' })
+    console.log("hashResult: ", hashResult);
+    let unsolvedHash = BigInt('0x' + hashResult.substring(0, hashResult.length - 2));
+    console.log("unsolvedHash: ", unsolvedHash);
+
     const input = {
       unsolved: unsolved,
       solved: solved,
+      unsolvedHash: unsolvedHash,
     };
 
     let dataResult = await exportCallDataGroth16(
@@ -166,6 +194,8 @@ describe("Sudoku", function () {
       "./zkproof/sudoku.wasm",
       "./zkproof/sudoku_final.zkey"
     );
+
+    // console.log("dataResult: ", dataResult);
 
     await expect(
       sudoku.verifySudoku(

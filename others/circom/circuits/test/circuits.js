@@ -1,10 +1,12 @@
 const { assert } = require("chai");
+const sha256 = require("./helpers/sha256");
 const wasm_tester = require("circom_tester").wasm;
 
 describe("Sudoku circuit", function () {
     let sudokuCircuit;
 
     before(async function () {
+        this.timeout(10000);
         sudokuCircuit = await wasm_tester("sudoku/sudoku.circom");
     });
 
@@ -33,6 +35,12 @@ describe("Sudoku circuit", function () {
                 [7, 9, 2, 6, 8, 3, 1, 5, 4],
             ],
         };
+
+        let hashInput = Buffer.from(input.unsolved.flat()).toString("hex");
+        let hashResult = sha256.hash(hashInput, { msgFormat: 'hex-bytes' })
+        let unsolvedHash = BigInt('0x' + hashResult.substring(0, hashResult.length - 2));
+        input.unsolvedHash = unsolvedHash;
+
         const witness = await sudokuCircuit.calculateWitness(input);
         await sudokuCircuit.assertOut(witness, {});
     });
@@ -62,6 +70,12 @@ describe("Sudoku circuit", function () {
                 [7, 9, 2, 6, 8, 3, 1, 5, 4],
             ],
         };
+
+        let hashInput = Buffer.from(input.unsolved.flat()).toString("hex");
+        let hashResult = sha256.hash(hashInput, { msgFormat: 'hex-bytes' })
+        let unsolvedHash = BigInt('0x' + hashResult.substring(0, hashResult.length - 2));
+        input.unsolvedHash = unsolvedHash;
+
         try {
             await sudokuCircuit.calculateWitness(input);
         } catch (err) {
@@ -95,6 +109,11 @@ describe("Sudoku circuit", function () {
                 [6, 9, 2, 1, 4, 5, 3, 8, 7],
             ],
         };
+
+        let hashInput = Buffer.from(input.unsolved.flat()).toString("hex");
+        let hashResult = sha256.hash(hashInput, { msgFormat: 'hex-bytes' })
+        let unsolvedHash = BigInt('0x' + hashResult.substring(0, hashResult.length - 2));
+        input.unsolvedHash = unsolvedHash;
         try {
             await sudokuCircuit.calculateWitness(input);
         } catch (err) {
@@ -128,6 +147,11 @@ describe("Sudoku circuit", function () {
                 [7, 9, 2, 6, 8, 3, 1, 5, 4],
             ],
         };
+
+        let hashInput = Buffer.from(input.unsolved.flat()).toString("hex");
+        let hashResult = sha256.hash(hashInput, { msgFormat: 'hex-bytes' })
+        let unsolvedHash = BigInt('0x' + hashResult.substring(0, hashResult.length - 2));
+        input.unsolvedHash = unsolvedHash;
         try {
             await sudokuCircuit.calculateWitness(input);
         } catch (err) {
@@ -161,6 +185,11 @@ describe("Sudoku circuit", function () {
                 [4, 9, 2, 6, 8, 3, 1, 5, 7],
             ],
         };
+
+        let hashInput = Buffer.from(input.unsolved.flat()).toString("hex");
+        let hashResult = sha256.hash(hashInput, { msgFormat: 'hex-bytes' })
+        let unsolvedHash = BigInt('0x' + hashResult.substring(0, hashResult.length - 2));
+        input.unsolvedHash = unsolvedHash;
         try {
             await sudokuCircuit.calculateWitness(input);
         } catch (err) {
@@ -194,6 +223,11 @@ describe("Sudoku circuit", function () {
                 [7, 9, 2, 6, 8, 3, 1, 5, 4],
             ],
         };
+
+        let hashInput = Buffer.from(input.unsolved.flat()).toString("hex");
+        let hashResult = sha256.hash(hashInput, { msgFormat: 'hex-bytes' })
+        let unsolvedHash = BigInt('0x' + hashResult.substring(0, hashResult.length - 2));
+        input.unsolvedHash = unsolvedHash;
         try {
             await sudokuCircuit.calculateWitness(input);
         } catch (err) {
