@@ -10,37 +10,50 @@ digest = "0.9"
 sha2 = "0.9"
 blake2 = { version = "0.9", default-features = false }
 hex = "*"
-ark-std = { version = "^0.3.0", default-features = false, features = [
-    "parallel",
-] }
-ark-ff = { version = "^0.3.0", default-features = false, features = [
-    "parallel",
-] }
-ark-ec = { version = "^0.3.0", default-features = false, features = [
-    "parallel",
-] }
-ark-groth16 = { version = "^0.3.0", features = ["parallel"] }
-ark-marlin = { version = "^0.3.0", features = ["parallel"] }
-ark-r1cs-std = { version = "^0.3.0", default-features = false, features = [
-    "parallel",
-] }
+ark-std = { version = "^0.3.0", default-features = false }
+ark-ff = { version = "^0.3.0", default-features = false }
+ark-ec = { version = "^0.3.0", default-features = false }
+ark-groth16 = { version = "^0.3.0" }
+ark-marlin = { version = "^0.3.0" }
+ark-r1cs-std = { version = "^0.3.0", default-features = false }
 
-ark-poly-commit = { version = "^0.3.0", features = ["parallel"] }
-ark-poly = { version = "^0.3.0", features = ["parallel"] }
-ark-crypto-primitives = { git = "https://github.com/arkworks-rs/crypto-primitives", rev="f4d814", features = ["r1cs","parallel"] }
+ark-poly-commit = { version = "^0.3.0" }
+ark-poly = { version = "^0.3.0" }
+ark-crypto-primitives = { git = "https://github.com/arkworks-rs/crypto-primitives", rev = "f4d814" }
 
 ark-bls12-381 = { version = "^0.3.0" }
-ark-ed-on-bls12-381 = { version = "^0.3.0", features = ["r1cs"] }
+ark-ed-on-bls12-381 = { version = "^0.3.0" }
 ark-bn254 = { version = "^0.3.0" }
-ark-ed-on-bn254 = { version = "^0.3.0", features = ["r1cs"] }
+ark-ed-on-bn254 = { version = "^0.3.0" }
 
 ark-relations = { version = "^0.3.0", default-features = false }
 ark-snark = { version = "^0.3.0", default-features = false }
 ark-serialize = { version = "^0.3.0", default-features = false }
 
-tracing = { version = "0.1", default-features = false, features = [ "attributes" ] }
+tracing = { version = "0.1", default-features = false, features = [
+    "attributes",
+] }
 tracing-subscriber = { version = "0.2" }
 
 [dependencies.num-bigint]
 version = "0.4.0"
 default-features = false
+
+[features]
+default = ["parallel", "r1cs"]
+parallel = [
+    "ark-std/parallel",
+    "ark-ff/parallel",
+    "ark-ec/parallel",
+    "ark-groth16/parallel",
+    "ark-marlin/parallel",
+    "ark-r1cs-std/parallel",
+    "ark-poly-commit/parallel",
+    "ark-poly/parallel",
+    "ark-crypto-primitives/parallel",
+]
+r1cs = [
+    "ark-crypto-primitives/r1cs",
+    "ark-ed-on-bls12-381/r1cs",
+    "ark-ed-on-bn254/r1cs",
+]

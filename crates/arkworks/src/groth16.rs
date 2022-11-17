@@ -3,7 +3,7 @@ use std::time::Instant;
 use ark_ec::PairingEngine;
 use ark_ff::PrimeField;
 use ark_groth16::Groth16;
-use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystem, ConstraintLayer, TracingMode};
+use ark_relations::r1cs::{ConstraintLayer, ConstraintSynthesizer, ConstraintSystem, TracingMode};
 use ark_serialize::CanonicalSerialize;
 use ark_snark::SNARK;
 use tracing_subscriber::prelude::__tracing_subscriber_SubscriberExt;

@@ -4,6 +4,19 @@ include "../node_modules/circomlib/circuits/comparators.circom";
 include "../node_modules/circomlib/circuits/bitify.circom";
 include "../node_modules/circomlib/circuits/sha256/sha256.circom";
 
+template SudokuRange() {
+    signal input value;
+    signal output out;
+    signal res[9];
+    value - 1 ==> res[0];
+
+    for (var i = 2; i < 10; i++) {
+        res[i-2] * (value - i) ==> res[i-1];
+    }
+
+    res[8] ==> out;
+}
+
 template Sudoku() {
     signal input unsolved[9][9];
     signal input solved[9][9];
@@ -12,22 +25,14 @@ template Sudoku() {
 
     // Check if the numbers of the solved sudoku are >=1 and <=9
     // Each number in the solved sudoku is checked to see if it is >=1 and <=9
-
-    component getone[9][9];
-    component letnine[9][9];
-
+    component range[9][9];
 
     for (var i = 0; i < 9; i++) {
        for (var j = 0; j < 9; j++) {
-           letnine[i][j] = LessEqThan(32);
-           letnine[i][j].in[0] <== solved[i][j];
-           letnine[i][j].in[1] <== 9;
-
-           getone[i][j] = GreaterEqThan(32);
-           getone[i][j].in[0] <== solved[i][j];
-           getone[i][j].in[1] <== 1;
-
-           letnine[i][j].out ===  getone[i][j].out;
+           range[i][j] = SudokuRange();
+           range[i][j].value <== solved[i][j];
+           
+           range[i][j].out ===  0;
         }
     }
 

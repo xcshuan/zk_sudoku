@@ -3,7 +3,7 @@ use std::time::Instant;
 use ark_ff::PrimeField;
 use ark_marlin::{AHPForR1CS, Marlin};
 use ark_poly::univariate::DensePolynomial;
-use ark_poly_commit::PolynomialCommitment;
+use ark_poly_commit::{PCUniversalParams, PolynomialCommitment};
 use ark_relations::r1cs::{ConstraintLayer, ConstraintSynthesizer, ConstraintSystem, TracingMode};
 use ark_serialize::CanonicalSerialize;
 use digest::Digest;
@@ -55,23 +55,28 @@ where
 
     let num_constraints: usize = index.index_info.num_constraints;
     let num_variables: usize = index.index_info.num_variables;
+    let num_non_zero: usize = index.index_info.num_non_zero;
 
     println!(
-        "Marlin, num_constraints: {}, num_variables: {}",
-        num_constraints, num_variables
+        "Marlin, num_constraints: {}, num_variables: {}, num_non_zero: {}, max_degree: {}",
+        num_constraints,
+        num_variables,
+        num_non_zero,
+        index.max_degree()
     );
 
     let mut rng = &mut ark_std::test_rng();
 
     let setup_start = Instant::now();
     let universal_srs =
-        Marlin::<F, PC, D>::universal_setup(num_constraints, num_variables, num_variables, rng)
+        Marlin::<F, PC, D>::universal_setup(num_constraints, num_variables, num_non_zero, rng)
             .unwrap();
     let setup_time = setup_start.elapsed();
     println!(
-        "setup time {}ms, {}s",
+        "setup time {}ms, {}s, max_degree: {}",
         setup_time.as_millis(),
-        setup_time.as_secs()
+        setup_time.as_secs(),
+        universal_srs.max_degree(),
     );
 
     // generate the setup parameters

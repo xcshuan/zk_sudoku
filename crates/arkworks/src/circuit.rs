@@ -1,61 +1,22 @@
-use std::{borrow::Borrow, cmp::Ordering};
+use std::ops::{MulAssign, Sub};
 
 use ark_crypto_primitives::{crh::sha256::constraints::Sha256Gadget, CRHSchemeGadget};
 use ark_ff::PrimeField;
 use ark_r1cs_std::{fields::fp::FpVar, prelude::*};
-use ark_relations::r1cs::{ConstraintSynthesizer, Namespace, SynthesisError};
+use ark_relations::r1cs::{ConstraintSynthesizer, SynthesisError};
 use sha2::Sha256;
 
-#[derive(Clone, Debug)]
-pub struct U8Var<F: PrimeField>(pub UInt8<F>);
-
-impl<F: PrimeField> U8Var<F> {
-    #[tracing::instrument(
-        target = "r1cs",
-        skip(self, other, ordering, should_also_check_equality)
-    )]
-    fn enforce_cmp(
-        &self,
-        other: &U8Var<F>,
-        ordering: Ordering,
-        should_also_check_equality: bool,
-    ) -> Result<(), SynthesisError> {
-        let self_bits = self.0.to_bits_le()?;
-        let self_fe = Boolean::le_bits_to_fp_var(&self_bits)?;
-        let other_bits = other.0.to_bits_le()?;
-        let other_fe = Boolean::le_bits_to_fp_var(&other_bits)?;
-        self_fe.enforce_cmp(&other_fe, ordering, should_also_check_equality)
+#[tracing::instrument(target = "r1cs", skip(value))]
+fn enforce_range<F: PrimeField>(value: &UInt8<F>) -> Result<(), SynthesisError> {
+    let self_bits = value.to_bits_le()?;
+    let self_fe = Boolean::le_bits_to_fp_var(&self_bits)?;
+    let mut res_mul = (&self_fe).sub(FpVar::one());
+    for i in 2..=9u32 {
+        let res = &self_fe - FpVar::Constant(i.into());
+        res_mul.mul_assign(res)
     }
 
-    #[tracing::instrument(target = "r1cs", skip(self, other))]
-    fn enforce_not_equal(&self, other: &Self) -> Result<(), SynthesisError> {
-        self.0.enforce_not_equal(&other.0)
-    }
-
-    #[tracing::instrument(target = "r1cs", skip(self, other, should_enforce))]
-    fn conditional_enforce_equal(
-        &self,
-        other: &Self,
-        should_enforce: &Boolean<F>,
-    ) -> Result<(), SynthesisError> {
-        self.0.conditional_enforce_equal(&other.0, should_enforce)
-    }
-
-    #[tracing::instrument(target = "r1cs", skip(self))]
-    fn is_zero(&self) -> Result<Boolean<F>, SynthesisError> {
-        self.0.is_eq(&UInt8::new_constant(self.0.cs(), 0)?)
-    }
-}
-
-impl<F: PrimeField> AllocVar<u8, F> for U8Var<F> {
-    #[tracing::instrument(target = "r1cs", skip(cs, f, mode))]
-    fn new_variable<T: Borrow<u8>>(
-        cs: impl Into<Namespace<F>>,
-        f: impl FnOnce() -> Result<T, SynthesisError>,
-        mode: AllocationMode,
-    ) -> Result<Self, SynthesisError> {
-        UInt8::new_variable(cs.into(), || f().map(|u| u), mode).map(Self)
-    }
+    res_mul.enforce_equal(&FpVar::zero())
 }
 
 #[derive(Clone)]
@@ -79,36 +40,33 @@ impl<F: PrimeField> ConstraintSynthesizer<F> for SudokuCircuit<F> {
                 (),
             )?;
 
-        let one_var = U8Var::new_constant(cs.clone(), 1u8)?;
-        let nine_var = U8Var::new_constant(cs.clone(), 9u8)?;
-
         // Check if the numbers of the solved sudoku are >=1 and <=9
         // Each number in the solved sudoku is checked to see if it is >=1 and <=9
         for i in 0..9 {
             unsolved_var.push(Vec::with_capacity(9));
             solved_var.push(Vec::with_capacity(9));
             for j in 0..9 {
-                unsolved_var[i].push(U8Var::new_witness(
+                unsolved_var[i].push(UInt8::new_witness(
                     ark_relations::ns!(cs, "unsolved"),
                     || Ok(self.unsolved[i][j]),
                 )?);
 
-                solved_var[i].push(U8Var::new_witness(
+                solved_var[i].push(UInt8::new_witness(
                     ark_relations::ns!(cs, "solved"),
                     || Ok(self.solved[i][j]),
                 )?);
 
-                solved_var[i][j].enforce_cmp(&one_var, std::cmp::Ordering::Greater, true)?;
-                solved_var[i][j].enforce_cmp(&nine_var, std::cmp::Ordering::Less, true)?;
+                enforce_range(&solved_var[i][j])?;
             }
         }
 
+        let zero_var = UInt8::new_constant(ark_relations::ns!(cs, "zero"), 0u8)?;
         // Check if unsolved is the initial state of solved
         // If unsolved[i][j] is not zero, it means that solved[i][j] is equal to unsolved[i][j]
         // If unsolved[i][j] is zero, it means that solved [i][j] is different from unsolved[i][j]
         for i in 0..9 {
             for j in 0..9 {
-                let is_zero = unsolved_var[i][j].is_zero()?;
+                let is_zero = unsolved_var[i][j].is_eq(&zero_var)?;
                 unsolved_var[i][j].conditional_enforce_equal(&solved_var[i][j], &is_zero.not())?;
             }
         }
@@ -155,7 +113,7 @@ impl<F: PrimeField> ConstraintSynthesizer<F> for SudokuCircuit<F> {
 
         let hash_input = unsolved_var
             .into_iter()
-            .map(|row| row.into_iter().map(|u8_var| u8_var.0))
+            .map(|row| row.into_iter().map(|u8_var| u8_var))
             .flatten()
             .collect::<Vec<UInt8<F>>>();
 
