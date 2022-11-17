@@ -1607,6 +1607,7 @@ dependencies = [
  "ark-ff",
  "ark-poly",
  "ark-poly-commit",
+ "ark-serialize",
  "derivative",
  "plonk",
  "plonk-core",

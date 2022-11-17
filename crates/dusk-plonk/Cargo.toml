@@ -7,6 +7,7 @@ edition = "2021"
 
 [dependencies]
 rand_core = { version = "0.6", default-features = false }
+rand = { version = "0.8", default-features = false }
 dusk-plonk = { version = "0.13" }
 dusk-bls12_381 = { version = "0.11", default-features = false, features = [
     "groups",
@@ -14,3 +15,17 @@ dusk-bls12_381 = { version = "0.11", default-features = false, features = [
     "endo",
 ] }
 dusk-jubjub = { version = "0.12", default-features = false }
+dusk-bytes = "0.1"
+
+[dev-dependencies]
+
+
+[features]
+default = ["std"]
+std = [
+    "rand/std",
+    "rand/std_rng",
+    "rand_core/std",
+    "dusk-bls12_381/default", # Includes `parallel`
+    "dusk-jubjub/default",
+]
