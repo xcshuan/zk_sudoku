@@ -1,12 +1,9 @@
 use plonky2::{
     field::{goldilocks_field::GoldilocksField, types::Field},
-    iop::{
-        target::Target,
-        witness::{PartialWitness, Witness},
-    },
+    iop::witness::{PartialWitness, Witness},
     plonk::{
         circuit_builder::CircuitBuilder,
-        circuit_data::{CircuitConfig, CircuitData, VerifierCircuitData},
+        circuit_data::{CircuitConfig, CircuitData},
         config::PoseidonGoldilocksConfig,
         proof::ProofWithPublicInputs,
     },
@@ -105,7 +102,7 @@ impl SudokuCircuit {
 
         // build circuit
         let circuit = builder.build();
-        
+
         let mut pw = PartialWitness::new();
         for i in 0..9 {
             for j in 0..9 {
