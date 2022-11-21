@@ -1,4 +1,4 @@
-use ark_ff::{FftField, PrimeField};
+use ark_ff::FftField;
 use jf_relation::{errors::CircuitError, Circuit, PlonkCircuit, Variable};
 
 pub fn range_check<F: FftField>(

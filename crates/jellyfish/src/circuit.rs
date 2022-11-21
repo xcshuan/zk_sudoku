@@ -9,12 +9,11 @@ use std::marker::PhantomData;
 
 use ark_ec::ModelParameters;
 use ark_ff::PrimeField;
-use jf_relation::{errors::CircuitError, Circuit, PlonkCircuit, Variable};
+use jf_relation::{errors::CircuitError, Circuit, PlonkCircuit};
 
-use crate::utils::{range_check, range_look_up};
+use crate::utils::range_check;
 
 pub struct SudokuCircuit<F, P> {
-    pub use_lookup: bool,
     pub unsolved: [[u8; 9]; 9],
     pub solved: [[u8; 9]; 9],
     pub _marker1: PhantomData<F>,
@@ -22,16 +21,12 @@ pub struct SudokuCircuit<F, P> {
 }
 
 impl<F: PrimeField, P: ModelParameters<BaseField = F>> SudokuCircuit<F, P> {
-    pub fn systhesize(&self) -> Result<PlonkCircuit<F>, CircuitError> {
+    pub fn synthesize(&self) -> Result<PlonkCircuit<F>, CircuitError> {
         // Step 1:
         // We instantiate a turbo plonk circuit.
         //
         // Here we only need turbo plonk since we are not using plookups.
-        let mut circuit = if self.use_lookup {
-            PlonkCircuit::<F>::new_ultra_plonk(4)
-        } else {
-            PlonkCircuit::<F>::new_turbo_plonk()
-        };
+        let mut circuit = PlonkCircuit::<F>::new_turbo_plonk();
 
         let mut unsolved_vars = Vec::with_capacity(9);
         self.unsolved.iter().enumerate().try_for_each(|(i, x)| {
@@ -55,18 +50,9 @@ impl<F: PrimeField, P: ModelParameters<BaseField = F>> SudokuCircuit<F, P> {
 
         // Check if the numbers of the solved sudoku are >=1 and <=9
         // Each number in the solved sudoku is checked to see if it is >=1 and <=9
-        if self.use_lookup {
-            let lookup_vars: Vec<Variable> = solved_vars
-                .iter()
-                .map(|x| x.iter().map(|y| *y))
-                .flatten()
-                .collect();
-            range_look_up(&mut circuit, &lookup_vars)?;
-        } else {
-            for i in 0..9 {
-                for j in 0..9 {
-                    range_check(&mut circuit, solved_vars[i][j])?;
-                }
+        for i in 0..9 {
+            for j in 0..9 {
+                range_check(&mut circuit, solved_vars[i][j])?;
             }
         }
 
@@ -148,7 +134,6 @@ mod tests {
     #[test]
     fn test_circuit() {
         let circuit: SudokuCircuit<Fr, EdwardsParameters> = SudokuCircuit {
-            use_lookup: false,
             unsolved: [
                 [0, 0, 0, 0, 0, 6, 0, 0, 0],
                 [0, 0, 7, 2, 0, 0, 8, 0, 0],
@@ -175,7 +160,7 @@ mod tests {
             _marker2: PhantomData,
         };
 
-        let mut circuit = circuit.systhesize().unwrap();
+        let mut circuit = circuit.synthesize().unwrap();
         // Sanity check: the circuit must be satisfied.
         assert!(circuit.check_circuit_satisfiability(&[]).is_ok());
 
