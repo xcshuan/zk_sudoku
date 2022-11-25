@@ -21,13 +21,6 @@ pub struct SudokuCircuit {
     pub solved: [[u64; 9]; 9],
 }
 
-/**
- * prove a^2 * b^2 = c
- * |(0)    (1)      (2)          |
- * | a      a      a * a         |
- * | b      b      b * b         |
- * | a * a  b * b  a * a + b * b |
- */
 impl SudokuCircuit {
     pub fn synthesize(&self) -> Result<(ProofWithPublicInputs<F, C, 2>, CircuitData<F, C, 2>)> {
         let config = CircuitConfig::standard_recursion_zk_config();

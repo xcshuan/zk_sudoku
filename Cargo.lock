@@ -3036,6 +3036,8 @@ version = "0.1.0"
 dependencies = [
  "halo2_proofs",
  "plotters",
+ "rand",
+ "rand_core 0.6.4",
  "tabbycat",
 ]
 

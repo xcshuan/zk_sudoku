@@ -26,7 +26,7 @@ pub struct SudoukuConfig<F: FieldExt> {
     pub is_equal: IsEqualConfig<F>,
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 struct SudoukuCircuit<F> {
     pub unsolved: [[u64; 9]; 9],
     pub solved: [[u64; 9]; 9],
@@ -313,11 +313,16 @@ impl<F: FieldExt> Circuit<F> for SudoukuCircuit<F> {
 
 #[cfg(test)]
 mod tests {
+    use std::time::Instant;
+
     use halo2_proofs::{
         dev::{FailureLocation, MockProver, VerifyFailure},
-        pasta::Fp,
-        plonk::Any,
+        pasta::{vesta, Fp},
+        plonk::{create_proof, keygen_pk, keygen_vk, verify_proof, Any, SingleVerifier},
+        poly::commitment::Params,
+        transcript::{Blake2bRead, Blake2bWrite, Challenge255},
     };
+    use rand::rngs::ThreadRng;
 
     use super::SudoukuCircuit;
 
@@ -350,18 +355,64 @@ mod tests {
             _marker: std::marker::PhantomData,
         };
 
-        let prover = MockProver::run(
-            k,
-            &circuit,
-            vec![circuit
-                .unsolved
-                .iter()
-                .flatten()
-                .map(|x| Fp::from(*x))
-                .collect::<Vec<_>>()],
-        )
-        .unwrap();
+        let public_inputs = circuit
+            .unsolved
+            .iter()
+            .flatten()
+            .map(|x| Fp::from(*x))
+            .collect::<Vec<_>>();
+        let prover = MockProver::run(k, &circuit, vec![public_inputs.clone()]).unwrap();
         prover.assert_satisfied();
+
+        // test proof generation and verification
+        {
+            // Initialize the polynomial commitment parameters
+            let params: Params<vesta::Affine> = Params::new(k);
+            // Initialize the proving key
+            let vk = keygen_vk(&params, &circuit).expect("keygen_vk should not fail");
+            let pk = keygen_pk(&params, vk, &circuit).expect("keygen_pk should not fail");
+
+            let mut rng = ThreadRng::default();
+            // Create a proof
+            let prove_start = Instant::now();
+            let mut transcript = Blake2bWrite::<_, _, Challenge255<_>>::init(vec![]);
+            create_proof(
+                &params,
+                &pk,
+                &[circuit.clone()],
+                &[&[&public_inputs]],
+                &mut rng,
+                &mut transcript,
+            )
+            .expect("proof generation should not fail");
+            let proof = transcript.finalize();
+            let prove_time = prove_start.elapsed();
+            println!(
+                "prove time {}ms, {}s",
+                prove_time.as_millis(),
+                prove_time.as_secs()
+            );
+            println!("proof size: {}", proof.len());
+            {
+                let verify_start = Instant::now();
+                let strategy = SingleVerifier::new(&params);
+                let mut transcript = Blake2bRead::<_, _, Challenge255<_>>::init(&proof[..]);
+                let verify_result = verify_proof(
+                    &params,
+                    pk.get_vk(),
+                    strategy,
+                    &[&[&public_inputs]],
+                    &mut transcript,
+                );
+                let verify_time = verify_start.elapsed();
+                println!(
+                    "verify time {}ms, {}s",
+                    verify_time.as_millis(),
+                    verify_time.as_secs()
+                );
+                assert!(verify_result.is_ok());
+            }
+        }
 
         {
             circuit.solved[0][0] = 10;
